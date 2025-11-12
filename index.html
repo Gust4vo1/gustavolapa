@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jogo da Velha vs Computador</title>
+  <style>
+    :root{
+      --bg:#0f172a;          /* slate-900 */
+      --panel:#111827;       /* gray-900 */
+      --panel-2:#1f2937;     /* gray-800 */
+      --accent:#22c55e;      /* green-500 */
+      --accent-2:#38bdf8;    /* sky-400 */
+      --text:#e5e7eb;        /* gray-200 */
+      --muted:#9ca3af;       /* gray-400 */
+      --win:#16a34a;         /* green-600 */
+      --lose:#ef4444;        /* red-500 */
+      --draw:#f59e0b;        /* amber-500 */
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 80% -10%, rgba(56,189,248,.18), transparent 60%),
+                  radial-gradient(900px 700px at -10% 90%, rgba(34,197,94,.18), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+      min-height:100svh;
+      display:grid; place-items:center; padding:24px;
+    }
+    .app{width:min(980px, 95vw);}
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      padding: clamp(16px, 2.5vw, 28px);
+    }
+    .header{display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap}
+    .title{font-size: clamp(22px, 4vw, 32px); font-weight:800; letter-spacing:.2px}
+    .subtitle{color:var(--muted); font-size:14px}
+
+    .scoreboard{
+      display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin-top:14px;
+    }
+    .score{
+      background: var(--panel-2);
+      border:1px solid rgba(255,255,255,.07);
+      border-radius: 14px; padding:14px; text-align:center;
+    }
+    .score .label{font-size:12px; color:var(--muted); letter-spacing:.4px}
+    .score .value{font-size: clamp(18px, 3vw, 28px); font-weight:800}
+
+    .board-wrap{display:grid; grid-template-columns: 1fr; gap:18px; margin-top:24px}
+    .status{
+      background: var(--panel-2);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 14px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; gap:10px;
+    }
+    .status-text{font-weight:700}
+    .pill{
+      padding:6px 10px; border-radius:999px; font-size:12px; letter-spacing:.3px; background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); color:var(--text);
+    }
+
+    .board{
+      display:grid; grid-template-columns: repeat(3, minmax(80px, 140px));
+      gap:12px; justify-content:center;
+      padding:8px
+    }
+    .cell{
+      width:100%; aspect-ratio:1/1; border-radius: 18px; background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.10); color:var(--text);
+      font-weight:900; font-size: clamp(38px, 6vw, 64px); display:grid; place-items:center;
+      cursor:pointer; user-select:none; position:relative; transition: transform .08s ease, border-color .15s ease;
+    }
+    .cell:hover{ transform: translateY(-2px); border-color: rgba(56,189,248,.5) }
+    .cell:active{ transform: translateY(0) scale(.98) }
+    .cell[disabled]{ opacity:.7; cursor:not-allowed; filter:saturate(.7) }
+
+    .cell.win{ outline: 2px solid var(--win); box-shadow: 0 0 0 4px rgba(22,163,74,.25) inset; }
+    .cell.lose{ outline: 2px solid var(--lose); box-shadow: 0 0 0 4px rgba(239,68,68,.25) inset; }
+    .cell.draw{ outline: 2px solid var(--draw); box-shadow: 0 0 0 4px rgba(245,158,11,.25) inset; }
+
+    .controls{ display:flex; flex-wrap:wrap; gap:10px }
+    .btn{
+      background: linear-gradient(180deg, rgba(56,189,248,.2), rgba(56,189,248,.1));
+      border:1px solid rgba(56,189,248,.45);
+      color:var(--text);
+      padding:10px 14px; border-radius: 12px; font-weight:700; cursor:pointer; letter-spacing:.3px; transition: transform .06s ease, background .2s ease;
+    }
+    .btn:hover{ transform: translateY(-1px) }
+    .btn.secondary{ background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.12) }
+    .btn.danger{ background: linear-gradient(180deg, rgba(239,68,68,.25), rgba(239,68,68,.12)); border-color: rgba(239,68,68,.55) }
+
+    .footer{ margin-top:14px; color:var(--muted); font-size:12px; text-align:center }
+
+    @media (max-width: 420px){
+      .board{ grid-template-columns: repeat(3, minmax(80px, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <div class="header">
+        <div>
+          <div class="title">Jogo da Velha <span class="pill">vs Computador</span></div>
+          <div class="subtitle">Você é o <strong>X</strong>. A máquina é o <strong>O</strong>. Vença se puder 😄</div>
+        </div>
+        <div class="controls">
+          <button id="newRound" class="btn">Novo round</button>
+          <button id="resetBoard" class="btn secondary">Limpar tabuleiro</button>
+          <button id="resetScore" class="btn danger">Zerar placar</button>
+        </div>
+      </div>
+
+      <div class="scoreboard">
+        <div class="score" aria-live="polite">
+          <div class="label">Vitórias (Você)</div>
+          <div class="value" id="scoreX">0</div>
+        </div>
+        <div class="score" aria-live="polite">
+          <div class="label">Empates</div>
+          <div class="value" id="scoreD">0</div>
+        </div>
+        <div class="score" aria-live="polite">
+          <div class="label">Vitórias (PC)</div>
+          <div class="value" id="scoreO">0</div>
+        </div>
+      </div>
+
+      <div class="board-wrap">
+        <div class="status">
+          <div class="status-text" id="status">Sua vez! Clique em um quadrado.</div>
+          <span class="pill" id="turnBadge">Turno: X</span>
+        </div>
+        <div class="board" id="board" role="grid" aria-label="Tabuleiro do jogo da velha"></div>
+      </div>
+
+      <div class="footer">Placar fica salvo no seu navegador (localStorage). Código em um único arquivo HTML.</div>
+    </div>
+  </div>
+
+  <script>
+    // --- Estado do jogo ---
+    const boardEl = document.getElementById('board');
+    const statusEl = document.getElementById('status');
+    const turnBadge = document.getElementById('turnBadge');
+
+    const scoreXEl = document.getElementById('scoreX');
+    const scoreOEl = document.getElementById('scoreO');
+    const scoreDEl = document.getElementById('scoreD');
+
+    const newRoundBtn = document.getElementById('newRound');
+    const resetBoardBtn = document.getElementById('resetBoard');
+    const resetScoreBtn = document.getElementById('resetScore');
+
+    const X = 'X';
+    const O = 'O';
+    const WIN_LINES = [
+      [0,1,2],[3,4,5],[6,7,8], // linhas
+      [0,3,6],[1,4,7],[2,5,8], // colunas
+      [0,4,8],[2,4,6]          // diagonais
+    ];
+
+    let board = Array(9).fill(null);
+    let gameOver = false;
+    let humanTurn = true; // humano (X) começa
+
+    // --- Placar com persistência ---
+    const SCORE_KEY = 'ttt-score-v1';
+    let score = { X:0, O:0, D:0 };
+    try{
+      const saved = JSON.parse(localStorage.getItem(SCORE_KEY));
+      if(saved && typeof saved === 'object') score = { ...score, ...saved };
+    }catch(e){}
+
+    function saveScore(){
+      localStorage.setItem(SCORE_KEY, JSON.stringify(score));
+      renderScore();
+    }
+    function renderScore(){
+      scoreXEl.textContent = score.X;
+      scoreOEl.textContent = score.O;
+      scoreDEl.textContent = score.D;
+    }
+
+    // --- UI do tabuleiro ---
+    function createBoard(){
+      boardEl.innerHTML = '';
+      for(let i=0;i<9;i++){
+        const btn = document.createElement('button');
+        btn.className = 'cell';
+        btn.setAttribute('aria-label', `Casa ${i+1}`);
+        btn.setAttribute('role','gridcell');
+        btn.addEventListener('click', ()=> handleHumanMove(i));
+        boardEl.appendChild(btn);
+      }
+      updateBoardUI();
+    }
+
+    function updateBoardUI(highlight){
+      [...boardEl.children].forEach((btn, i)=>{
+        btn.textContent = board[i] || '';
+        btn.disabled = !!board[i] || gameOver || (!humanTurn);
+        btn.classList.remove('win','lose','draw');
+      });
+      if(highlight){
+        const { line, result } = highlight;
+        line.forEach(i=>{
+          boardEl.children[i].classList.add(result==='X' ? 'win' : result==='O' ? 'lose' : 'draw');
+        });
+      }
+      turnBadge.textContent = `Turno: ${humanTurn?X:O}`;
+    }
+
+    // --- Lógica do jogo ---
+    function handleHumanMove(i){
+      if(gameOver || !humanTurn || board[i]) return;
+      board[i] = X;
+      humanTurn = false;
+      updateBoardUI();
+      const res = evaluateBoard(board);
+      if(res){ endGame(res); return; }
+      // computador joga depois de um pequeno delay para UX
+      setTimeout(()=>{
+        computerMove();
+      }, 220);
+    }
+
+    function computerMove(){
+      if(gameOver) return;
+      const best = bestMove(board);
+      if(best.index !== -1){
+        board[best.index] = O;
+      }
+      humanTurn = true;
+      updateBoardUI();
+      const res = evaluateBoard(board);
+      if(res){ endGame(res); return; }
+      statusEl.textContent = 'Sua vez!';
+    }
+
+    function endGame(res){
+      gameOver = true;
+      let message = '';
+      if(res.winner === X){
+        message = 'Você venceu!';
+        score.X++;
+      }else if(res.winner === O){
+        message = 'O computador venceu.';
+        score.O++;
+      }else{
+        message = 'Empate!';
+        score.D++;
+      }
+      statusEl.textContent = message;
+      saveScore();
+      updateBoardUI({ line: res.line || [], result: res.winner || 'D' });
+    }
+
+    function evaluateBoard(b){
+      for(const line of WIN_LINES){
+        const [a,b1,c] = line;
+        if(b[a] && b[a]===b[b1] && b[a]===b[c]){
+          return { winner: b[a], line };
+        }
+      }
+      if(b.every(x=>x)) return { winner:null, line:null, draw:true };
+      return null;
+    }
+
+    // Minimax (computador joga perfeito como O)
+    function bestMove(b){
+      let bestScore = -Infinity; let move = -1;
+      for(let i=0;i<9;i++){
+        if(!b[i]){
+          b[i] = O;
+          const score = minimax(b, 0, false);
+          b[i] = null;
+          if(score > bestScore){ bestScore = score; move = i; }
+        }
+      }
+      return { index: move, score: bestScore };
+    }
+
+    function minimax(b, depth, isMaximizing){
+      const outcome = evaluateBoard(b);
+      if(outcome){
+        if(outcome.winner === O) return 10 - depth;
+        if(outcome.winner === X) return depth - 10;
+        return 0; // empate
+      }
+      if(isMaximizing){
+        let best = -Infinity;
+        for(let i=0;i<9;i++) if(!b[i]){ b[i]=O; best=Math.max(best, minimax(b, depth+1, false)); b[i]=null; }
+        return best;
+      } else {
+        let best = Infinity;
+        for(let i=0;i<9;i++) if(!b[i]){ b[i]=X; best=Math.min(best, minimax(b, depth+1, true)); b[i]=null; }
+        return best;
+      }
+    }
+
+    function clearBoard(){
+      board = Array(9).fill(null);
+      gameOver = false;
+      humanTurn = true;
+      statusEl.textContent = 'Sua vez! Clique em um quadrado.';
+      updateBoardUI();
+    }
+
+    // --- Controles ---
+    newRoundBtn.addEventListener('click', clearBoard);
+    resetBoardBtn.addEventListener('click', ()=>{
+      clearBoard();
+      // não mexe no placar
+    });
+    resetScoreBtn.addEventListener('click', ()=>{
+      score = { X:0, O:0, D:0 };
+      saveScore();
+    });
+
+    // Inicialização
+    renderScore();
+    createBoard();
+  </script>
+</body>
+</html>
